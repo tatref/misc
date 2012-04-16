@@ -544,6 +544,7 @@ void render2(Scene* scene)
 void writeBMP(Color*** data, int width, int height, int bpp, char* filename)
 {
 	FILE* f = fopen(filename, "wb");
+	printf("%s\n", filename);
 	
 	int* intpt = malloc(sizeof(int));
 	short* shortpt = malloc(sizeof(short));
@@ -686,7 +687,7 @@ void interrupt(int sig)
 	tonemapping(scene);
 	printf("tonemapping OK\n");
 	
-	writeBMP(scene->data, scene->camera->resX, scene->camera->resY, 24, "test");
+	writeBMP(scene->data, scene->camera->resX, scene->camera->resY, 24, "test.bmp");
 	printf("writeBMP OK\n");
 	
 	// Wait for other threads to end
@@ -718,7 +719,7 @@ void* main_save(void* p)
 		sleep(10);
 		
 		tonemapping(scene);
-		writeBMP(scene->data, scene->camera->resX, scene->camera->resY, 24, "test");
+		writeBMP(scene->data, scene->camera->resX, scene->camera->resY, 24, "test.bmp");
 		printf("writeBMP OK\n");
 	}
 	
