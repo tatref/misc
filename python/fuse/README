@@ -1,0 +1,5 @@
+Test of a cache filesystem with fuse
+
+Create the following directories:
+- fs for mounting the fs
+- cache for copy of files
