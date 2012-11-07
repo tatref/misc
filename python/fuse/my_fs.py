@@ -15,28 +15,25 @@ except ImportError:
 import fuse
 from fuse import Fuse
 
+import logging
+import hashlib
+import shutil
+
+logger = logging.getLogger("my_fs")
+formatter = logging.Formatter('%(asctime)s - %(levelname)s : %(message)s')
+f = logging.FileHandler("/home/yann/misc/python/fuse/my_fs.log")
+f.setFormatter(formatter)
+logger.addHandler(f)
+
+# log all
+logger.setLevel(logging.INFO)
+
 
 if not hasattr(fuse, '__version__'):
 	raise RuntimeError, \
 		"your fuse-py doesn't know of fuse.__version__, probably it's too old."
 
 fuse.fuse_python_api = (0, 2)
-
-hello_path = '/hello'
-hello_str = 'Hello World!\n'
-
-#class MyStat(fuse.Stat):
-#	def __init__(self):
-#		self.st_mode = 0
-#		self.st_ino = 0
-#		self.st_dev = 0
-#		self.st_nlink = 0
-#		self.st_uid = 0
-#		self.st_gid = 0
-#		self.st_size = 0
-#		self.st_atime = 0
-#		self.st_mtime = 0
-#		self.st_ctime = 0
 
 class HelloFS(Fuse):
 	def __init__(self, *args, **kwargs):
@@ -50,61 +47,61 @@ class HelloFS(Fuse):
 		self.target = kwargs['target']
 		self.cache_dir = kwargs['cache_dir']
 
-		"""
-			Cache for stat sys call (owner, mtime...)
-		"""
+		#init cache
 		self.stat_cache = {}
+		self.stat_cache["/"] = os.stat(self.target)
 
 	def getattr(self, path):
-		# get value from cache if possible
-		if path in self.stat_cache:
-			st = self.stat_cache[path]
-		else:
-			st = os.stat(self.target + path)
+		logger.info("getattr " + path)
 
-			# add value to cache
-			self.stat_cache[path] = st
+		# get value and update cache
+		st = os.stat(self.target + path)
+		self.stat_cache[path] = st
 
 		return st
 
 	def readdir(self, path, offset):
-		# try to get value from cache
-		if os.path.exists(self.cache_dir + path) and path != "/":
-			dirs = os.listdir(self.cache_dir + path)
-		else:
-			dirs = os.listdir(self.target + path)
+		# is cache up-to-date ?
+		subs = os.listdir(self.target + path)
 
-			# add to cache
-			for r in dirs:
-				if os.path.isdir(r):
-					os.mkdir(self.cache_dir + r)
-				elif os.path.isfile(r):
-					#TODO
-					# Create file (name)
-					# copy content
-					pass
-
-		for r in  dirs:
+		for r in subs:
 			yield fuse.Direntry(r)
 
 	def open(self, path, flags):
-		if path != hello_path:
-			return -errno.ENOENT
-		accmode = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
-		if (flags & accmode) != os.O_RDONLY:
-			return -errno.EACCES
+		return 0
 
 	def read(self, path, size, offset):
-		if path != hello_path:
-			return -errno.ENOENT
-		slen = len(hello_str)
-		if offset < slen:
-			if offset + size > slen:
-				size = slen - offset
-			buf = hello_str[offset:offset+size]
+		logger.info("read path=" + path + " size=" + str(size) + " offset=" + str(offset))
+
+		cache_path = os.path.join(self.cache_dir, path[1:])
+		target_path = os.path.join(self.target, path[1:])
+
+		try:
+			if os.stat(target_path).st_mtime > self.stat_cache[path].st_mtime:
+				logger.info("new version of " + path + " available, removing old")
+				# new version of file available !
+				os.remove(cache_path)
+		except:
+			logger.warning("unable to get last modify time for " + path + ", falling back to cache")
+
+		if os.path.exists(cache_path):
+			logger.info("getting content of " + path + " from cache")
 		else:
-			buf = ''
-		return buf
+			logger.info("copying content of " + target_path + " to " + cache_path)
+			
+			d = self.cache_dir + "/" + "/".join(path.split("/")[1:-1])
+			if not os.path.exists(d):
+				os.mkdir(d)
+				shutil.copyfile(target_path, cache_path)
+			
+
+		f = open(cache_path)
+		f.seek(offset)
+		out = f.read(size)
+		f.close()
+
+		return out
+			
 
 	def chmod ( self, path, mode ):
 		print '*** chmod', path, oct(mode)
@@ -120,11 +117,14 @@ Userspace hello example
 		usage=usage,
 		dash_s_do='setsingle',
 		target = "/mnt/music",
-		cache_dir = "/home/yann/tmp/fuse/cache"
+		cache_dir = "/home/yann/misc/python/fuse/cache"
 		)
 
 	server.parse(errex=1)
 	server.main()
+
+	
+
 
 if __name__ == '__main__':
 	main()
