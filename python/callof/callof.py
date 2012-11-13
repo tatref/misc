@@ -3,12 +3,15 @@
 # Tool to slow specific IP on call of duty
 # Using Linux's traffic shaping and tshark
 #
+# Execute as root
+# Tested on backtrack 5
+#
 
 import optparse, os, re, subprocess, signal, sys
 
 # Sending ~20 pkts / second
 MIN_PACKETS = 70
-DELAY = 300				# ms
+DELAY = 400				# ms
 MY_IP = "192.168.0.1"
 
 """ctrl-c handler
@@ -19,9 +22,22 @@ def interrupt_handler(signal, frame):
 	init()
 	sys.exit(0)
 
+def run_cmd(c):
+	s = subprocess.Popen(c.split(), stdout=subprocess.PIPE, stderr = subprocess.PIPE)
+	v = s.wait()
+	if v != 0:
+		# An error occurred
+		print(c + "".join(map(str, s.stderr.readlines())))
+		print(c + "".join(map(str, s.stdout.readlines())))
+
 def init():
 	init_qdisc(DELAY)
-	#arpspoof()
+
+	# delete all rules
+	run_cmd("iptables -F")
+
+	# delete all chains
+	run_cmd("iptables -X")
 	
 
 def init_qdisc(delay):
@@ -31,12 +47,7 @@ def init_qdisc(delay):
 	"tc qdisc add dev eth0 parent 1:3 handle 30: netem delay " + str(delay) + "ms"]
 
 	for c in commands:
-		s = subprocess.Popen(c.split(), stdout=subprocess.PIPE, stderr = subprocess.PIPE)
-		v = s.wait()
-		if v != 0:
-			# An error occurred
-			print(c + "".join(map(str, s.stderr.readlines())))
-			print(c + "".join(map(str, s.stdout.readlines())))
+		run_cmd(c)
 
 def sniff():
 	tshark_cmd = "tshark -n -q -a duration:5 -z conv,udp not arp and udp and ip and port 3074"
@@ -63,22 +74,13 @@ def sniff():
 	return conv
 
 def slow(ip):
-	# delay in ms
-	init_qdisc(DELAY)
+	c = "tc filter add dev eth0 protocol ip parent 1:0 prio 3 u32 match ip dst " + ip + " flowid 1:3"
 	
-	pattern = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
-	if not pattern.match(ip):
-		raise ValueError
+	run_cmd(c)
+
+def kick(ip):
+	pass
 	
-	commands = ["tc filter add dev eth0 protocol ip parent 1:0 prio 3 u32 match ip dst " + ip + " flowid 1:3"]
-	
-	for c in commands:
-		s = subprocess.Popen(c.split(), stdout=subprocess.PIPE, stderr = subprocess.PIPE)
-		v = s.wait()
-		if v != 0:
-			# Error occurred
-			print(c + "".join(map(str, s.stderr.readlines())))
-			print(c + "".join(map(str, s.stdout.readlines())))
 
 def print_conv(conv):
 	print(conv)
@@ -99,6 +101,10 @@ def batch():
 		clients = []
 		for line in conv:
 			client_ip = line["ip1"] if line["ip1"] != MY_IP else line["ip2"]
+			pattern = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+			if not pattern.match(client_ip):
+				print("Warning : not an IP: " + client_ip)
+				continue
 			frames = line["in_frames"] + line["out_frames"]
 			clients.append(client_ip)
 		print(str(len(clients)) + " clients :\n" + "\n".join(clients))
@@ -107,13 +113,16 @@ def batch():
 		
 		while True:
 			for ip in clients:
-				init_qdisc(DELAY)
+				init()
 				slow(ip)
 				print("Slowing " + ip)
+
+				do_kick = raw_input("kick? ")
+				if do_kick == "y":
+					kick(ip)
 				raw_input("")
 			print("\nEnd of clients !")
 
 if __name__ == '__main__':
 	signal.signal(signal.SIGINT, interrupt_handler)
-	init()
 	batch()
