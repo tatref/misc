@@ -11,6 +11,7 @@
 #  
 #
 
+import time
 import curses
 import optparse
 import os
@@ -18,6 +19,7 @@ import re
 import signal
 import subprocess
 import sys
+import traceback
 
 # Sending ~20 pkts / second
 MIN_PACKETS = 70
@@ -177,6 +179,8 @@ Internal variables used by curses
 """
 class Model(object):
 	def __init__(self):
+		self.delay = 400
+		self.clients = []
 		# require :
 		# -host / not host
 		# -list of clients
@@ -185,7 +189,8 @@ class Model(object):
 		pass
 
 	def refresh_clients(self):
-		pass
+		self.clients.append("192.168.10.10")
+		self.clients.append("10.0.5.2")
 
 	def set_delay(delay):
 		self.delay = delay
@@ -201,11 +206,46 @@ class Model(object):
 Main curses display
 """
 def main_curses(screen, model):
-	screen.clear()
-	screen.addstr(0, 0, "Hello world !")
-	screen.refresh()
+	selected_client = 0
+	clients_y_offset = 1
 
-	screen.getch()
+	running = True
+	while running:
+		screen.clear()
+		screen.addstr(10, 0, str(selected_client))
+
+		# draw UI here
+		for i in range(len(model.clients)):
+			screen.addstr(clients_y_offset + i, 1, "[ ] " + model.clients[i])
+
+		if len(model.clients) > 0:
+			screen.move(selected_client + clients_y_offset, 2)
+
+
+		# end of draw UI
+		screen.refresh()
+
+		c = screen.getch()
+
+		if c == ord('q'):
+			# quit
+			running = False
+		if c == ord('r'):
+			# refresh
+			screen.addstr(0, 10, "Refreshing list of clients...")
+			screen.refresh()
+
+			time.sleep(2)
+			model.refresh_clients()
+		if c == curses.KEY_UP:
+			if selected_client > 0:
+				selected_client -= 1
+		if c == curses.KEY_DOWN:
+			if selected_client < len(model.clients) - 1:
+				selected_client += 1
+
+		# end of getch()
+	# end of main loop
 
 if __name__ == '__main__':
 	# ctrl-c handler
@@ -226,15 +266,12 @@ if __name__ == '__main__':
 
 		main_curses(screen, model)
 	except:
-		pass
-
-
-	# clean
-	try:
-		# clean terminal and print stacktrace
 		curses.echo()
 		curses.nocbreak()
 		curses.endwin()
 		traceback.print_exc()
-	except:
-		pass
+	finally:
+		curses.echo()
+		curses.nocbreak()
+		curses.endwin()
+
