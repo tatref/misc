@@ -86,8 +86,7 @@ def init_qdisc(delay):
 		run_cmd(c, False)
 
 """
-return a list of conversations
-TODO: explain return value
+return a list of conversations, each conversation beeinga dict of: ip1, ip2, outcoming packets, incoming packets
 """
 def sniff():
 	tshark_cmd = "tshark -n -q -a duration:5 -z conv,udp not arp and udp and ip and port 3074"
@@ -179,6 +178,7 @@ Internal variables used by curses
 """
 class Model(object):
 	def __init__(self):
+		self.host = None
 		self.delay = 400
 		self.clients = []
 		# require :
@@ -189,35 +189,64 @@ class Model(object):
 		pass
 
 	def refresh_clients(self):
-		self.clients.append("192.168.10.10")
-		self.clients.append("10.0.5.2")
+		init()
+
+		self.host = None
+		self.clients = []
+
+		conv = sniff()
+
+		if conv == None or len(conv) == 0:
+			self.host = None
+		elif len(conv) == 1:
+			host = conv[0]["ip1"] if conv[0]["ip1"] != MY_IP else conv[0]["ip2"]
+			self.host = host
+			#run_cmd("./geolocate_ip.sh " + host, True)
+		else:
+			self.host = "self"
+			clients = []
+			for line in conv:
+				client_ip = line["ip1"] if line["ip1"] != MY_IP else line["ip2"]
+				pattern = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+				if not pattern.match(client_ip):
+					print("Warning : not an IP: " + client_ip)
+					continue
+				frames = line["in_frames"] + line["out_frames"]
+				self.clients.append(client_ip)
 
 	def set_delay(delay):
 		self.delay = delay
 
 	def slow(ip):
-		pass
+		init()
+		slow(ip)
 
 	def kick(ip):
-		pass
+		kick(ip)
 
 
 """
 Main curses display
 """
 def main_curses(screen, model):
+	slowed_client = None
 	selected_client = 0
 	clients_y_offset = 1
 
 	running = True
 	while running:
 		screen.clear()
-		screen.addstr(10, 0, str(selected_client))
 
 		# draw UI here
+		###############
+		screen.addstr(0, 0, "Host is " + str(model.host))
+
 		for i in range(len(model.clients)):
 			screen.addstr(clients_y_offset + i, 1, "[ ] " + model.clients[i])
+			if slowed_client == i:
+				screen.addstr(clients_y_offset + i, 2, "x")
 
+		# set cursor pos
 		if len(model.clients) > 0:
 			screen.move(selected_client + clients_y_offset, 2)
 
@@ -232,10 +261,14 @@ def main_curses(screen, model):
 			running = False
 		if c == ord('r'):
 			# refresh
-			screen.addstr(0, 10, "Refreshing list of clients...")
+			screen.addstr(0, 30, "Refreshing list of clients...")
 			screen.refresh()
 
-			time.sleep(2)
+			# re-init UI
+			slowed_client = None
+			selected_client = 0
+
+			# refresh model
 			model.refresh_clients()
 		if c == curses.KEY_UP:
 			if selected_client > 0:
@@ -243,6 +276,10 @@ def main_curses(screen, model):
 		if c == curses.KEY_DOWN:
 			if selected_client < len(model.clients) - 1:
 				selected_client += 1
+		if c == ord('x'):
+			if model.host == "self":
+				slowed_client = selected_client
+				model.slow(model.clients[selected_client])
 
 		# end of getch()
 	# end of main loop
