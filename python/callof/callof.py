@@ -23,7 +23,7 @@ import traceback
 
 # Sending ~20 pkts / second
 MIN_PACKETS = 70
-DELAY = 400				# ms
+DELAY = 1000				# ms
 MY_IP = "192.168.0.1"
 
 """
@@ -126,6 +126,8 @@ low-level function to kick ip
 def kick(ip):
 	cmd = "iptables -I INPUT -i eth0 -s " + ip + " -j DROP"
 	run_cmd(cmd)
+	cmd = "iptables -I OUTPUT -d " + ip + " -j DROP"
+	run_cmd(cmd)
 
 def print_conv(conv):
 	print(conv)
@@ -179,7 +181,7 @@ Internal variables used by curses
 class Model(object):
 	def __init__(self):
 		self.host = None
-		self.delay = 400
+		self.delay = 1000
 		self.clients = []
 		# require :
 		# -host / not host
@@ -219,9 +221,10 @@ class Model(object):
 
 	def slow(ip):
 		init()
-		slow(ip)
+		model.slow(ip)
 
 	def kick(ip):
+		init()
 		kick(ip)
 
 
@@ -276,10 +279,14 @@ def main_curses(screen, model):
 		if c == curses.KEY_DOWN:
 			if selected_client < len(model.clients) - 1:
 				selected_client += 1
-		if c == ord('x'):
+		if c == ord(' '):
 			if model.host == "self":
 				slowed_client = selected_client
 				model.slow(model.clients[selected_client])
+		if c == ord('k'):
+			if model.host == "self":
+				kicked_client = selected_client
+				model.kick(model.clients[selected_client])
 
 		# end of getch()
 	# end of main loop
@@ -289,26 +296,27 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGINT, interrupt_handler)
 
 	# curses
-	screen = curses.initscr()
-	curses.noecho()		# dont echo input keys
-	curses.cbreak()		# don't wait for 'enter' to read keys
-	screen.keypad(1)	# interpret special keys (UP, DOWN...)
+	#screen = curses.initscr()
+	#curses.noecho()		# dont echo input keys
+	#curses.cbreak()		# don't wait for 'enter' to read keys
+	#screen.keypad(1)	# interpret special keys (UP, DOWN...)
 
-	# model
-	model = Model()
+	## model
+	#model = Model()
 
 	try:
-		# old term script
-		#batch()
-
-		main_curses(screen, model)
+		# old terminal script
+		batch()
 	except:
-		curses.echo()
-		curses.nocbreak()
-		curses.endwin()
-		traceback.print_exc()
-	finally:
-		curses.echo()
-		curses.nocbreak()
-		curses.endwin()
+		pass
+		#main_curses(screen, model)
+	#except:
+	#	curses.echo()
+	#	curses.nocbreak()
+	#	curses.endwin()
+	#	traceback.print_exc()
+	#finally:
+	#	curses.echo()
+	#	curses.nocbreak()
+	#	curses.endwin()
 

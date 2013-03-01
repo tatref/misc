@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Wrapper script for callof.py script
-# arpspoof gateway to intercept network flow between call of duty player and gateway
+# Configure Windows to use the Linux box as gateway
 #
 
 
@@ -13,38 +13,32 @@ ETH=eth0
 PLAYER=192.168.0.1
 
 #########################
-# Functions
-#########################
-
-function clean {
-	pkill arpspoof
-}
-
-#########################
 # Main
 #########################
-
-trap clean SIGINT
 
 # check that we are root
 if [ $(id -u) -ne 0 ]
 then
-	echo "rerun as root"
+	echo "re-run as root"
 	exit 1
 fi
 
 gateway=$(ip route | grep -o -P '(?<=default via )[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
 
-# kill all arpspoof processes
-clean
 
 # spoof gateway and player
 echo 1 > /proc/sys/net/ipv4/ip_forward
-arpspoof -i $ETH -t $PLAYER $gateway &> /dev/null &
-arpspoof -i $ETH -t $gateway $PLAYER &> /dev/null &
+
+sysctl net.ipv4.conf.eth0.send_redirects=0 > /dev/null
+sysctl net.ipv4.conf.all.send_redirects=0 > /dev/null
+
+#pkill -0 arpspoof
+#if [ $? -eq 1 ]
+#then
+#	arpspoof -i $ETH -t $PLAYER $gateway &> /dev/null &
+#	arpspoof -i $ETH -t $gateway $PLAYER &> /dev/null &
+#fi
 
 # main script
 ./callof.py
 
-# kill all arpspoof processes
-clean
