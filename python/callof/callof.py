@@ -12,7 +12,7 @@
 #
 
 import time
-import curses
+#import curses
 import optparse
 import os
 import re
