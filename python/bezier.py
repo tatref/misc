@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import copy
 import pygame
 import random
@@ -144,7 +146,7 @@ class BezViewer(object):
 		z = self.zoom
 
 		if point.x * z - 3 < pos[0] and point.x * z + 3 > pos[0] and point.y * z - 3 < pos[1] and point.y * z + 3 > pos[1]:
-			print "Selected :" + str(point)
+			print("Selected :" + str(point))
 			return True
 		return False
 
