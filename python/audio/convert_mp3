@@ -1,1 +1,0 @@
-ffmpeg -i toto.mp3 -ac 1 out.wav
