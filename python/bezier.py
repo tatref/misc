@@ -5,7 +5,6 @@ from __future__ import print_function
 import copy
 import pygame
 import random
-import time
 
 class Point(object):
 	def __init__(self, x=0, y=0):
