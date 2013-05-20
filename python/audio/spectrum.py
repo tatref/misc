@@ -6,7 +6,6 @@
 
 import numpy
 import pylab
-import scipy
 import struct
 import sys
 import wave
