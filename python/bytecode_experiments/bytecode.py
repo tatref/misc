@@ -12,7 +12,7 @@ def clean_code(dis_dump):
 
     stripped = ''
 
-    l = 0 # line counter for debug
+    l = 0  # line counter for debug
     for line in dis_dump.split('\n'):
         l += 1
 
@@ -76,36 +76,19 @@ def disassemble(bytecode):
     return None
 
 
-def execute(code):
-    """ Emulate the python interpreter
-    """
-
-    bytecode = code.co_code
-    # ...
-
 if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
-    # 'co_argcount', 'co_cellvars', 'co_code', 'co_consts', 'co_filename', 'co_firstlineno', 'co_flags', 'co_freevars', 'co_lnotab', 'co_name', 'co_names', 'co_nlocals', 'co_stacksize', 'co_varnames'
-
-
-    #dis_dump = """  2           0 LOAD_FAST                0 (a)
-    #              3 LOAD_FAST                1 (b)
-    #              6 BINARY_ADD          
-    #              7 STORE_FAST               2 (c)
-    #
-    #  3          10 LOAD_FAST                2 (c)
-    #             13 RETURN_VALUE        """
-
+    # JUMP into middle of opcode (0x09 = NOP)
     dis_dump = """
 
 0  JUMP_ABSOLUTE 5
 
 3  JUMP_ABSOLUTE 2313 # 0x0909
 
-7 LOAD_CONST 0
-10 RETURN_VALUE
+6 LOAD_CONST 0
+9 RETURN_VALUE
 
 """
 
@@ -123,12 +106,11 @@ if __name__ == '__main__':
     c = f.__code__
 
     # create new code object
-    #my_code = types.CodeType(c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags, c.co_code, c.co_consts, c.co_names, c.co_varnames, c.co_filename, c.co_name, c.co_firstlineno, c.co_lnotab)
     my_code = types.CodeType(c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags, my_bytecode, c.co_consts, c.co_names, c.co_varnames, c.co_filename, c.co_name, c.co_firstlineno, c.co_lnotab)
 
     # bind to function
     f.__code__ = my_code
 
-    # crash computer
+    # execute byte code
     val = f()
     print val
