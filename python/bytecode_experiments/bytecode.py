@@ -73,12 +73,35 @@ def assemble(assembly):
 def disassemble(bytecode):
     """ Try to disassemble python bytecode, return a string of instructions
     """
-    return None
 
+    all_opcodes = {dis.opmap[x]:x  for x in dis.opmap}  # reversed opmap dict
 
-if __name__ == '__main__':
-    logging.basicConfig(format='%(levelname)s: %(message)s',
-                        level=logging.DEBUG)
+    output = ''  # output dis dump
+
+    counter = 0  # instruction pointer
+    while counter < len(bytecode):
+        opcode = ord(bytecode[counter])
+
+        if not opcode in all_opcodes:
+            raise Exception('Invalid opcode: ' + str(opcode))
+
+        current_opname = all_opcodes[opcode]
+        output += str(counter) + '\t' + current_opname + '\t\t'
+
+        if opcode > dis.HAVE_ARGUMENT:
+            arg = ord(bytecode[counter + 1]) + (ord(bytecode[counter + 2]) << 8)
+            output += str(arg)
+
+            counter += 2
+
+        output += '\n'
+
+        counter += 1
+    return output
+
+def assemble_example():
+    """ Example of compilation & execution of homemade bytecode (jump into middle of instruction)
+    """
 
     # JUMP into middle of opcode (0x09 = NOP)
     dis_dump = """
@@ -114,3 +137,12 @@ if __name__ == '__main__':
     # execute byte code
     val = f()
     print val
+
+
+if __name__ == '__main__':
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG)
+
+    bytecode = '|\x00\x00|\x01\x00k\x04\x00r\x14\x00d\x01\x00GHn\x04\x00t\x00\x00Sd\x00\x00S'
+
+    print disassemble(bytecode)
