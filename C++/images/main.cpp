@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	}
 
 	auto output_filename = arguments[arguments.size() - 1];
-	//input.save(output_filename);
+	input.save(output_filename);
 	
 	return 0;
 }
