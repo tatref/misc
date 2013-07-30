@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#-*- coding: utf-8 -*-
+
+""" Program to show bezier curves
+"""
+
 
 from __future__ import print_function
 
@@ -50,8 +55,15 @@ class BezCurve(object):
 			points = copy.deepcopy(self.points)
 			for i in xrange(len(points[0]) - 1):
 				points.append([])
-				for p in xrange(len(points[i]) - 1):
-					new_point = points[i][p] + s * (points[i][p + 1] - points[i][p])
+
+				# shorcut of speed
+				points_i = points[i]
+
+				for p in xrange(len(points_i) - 1):
+					new_point = points_i[p] + s * (points_i[p + 1] - points_i[p])
+
+				#for p in xrange(len(points[i]) - 1):
+				#	new_point = points[i][p] + s * (points[i][p + 1] - points[i][p])
 					points[i + 1].append(new_point)
 			B.append(points[len(points) - 1][0])
 
@@ -90,7 +102,7 @@ def frange(start, stop, step):
 
 class BezViewer(object):
 	def __init__(self):
-		self.zoom = 1.0
+		self.zoom = 1.0 * 2 ** 6
 		self.quadCurves = []
 
 		self.running = True

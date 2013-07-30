@@ -5,6 +5,6 @@ import emu
 
 
 if __name__ =='__main__':
-	f = open("disk.dat")
-	emu = emu.Emulator(128, f)
+	f = open("rom")
+	emu = emu.Emulator(f)
 	emu.run()

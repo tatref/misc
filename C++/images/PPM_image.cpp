@@ -5,7 +5,7 @@ double gauss(double sigma, double x)
 	return 1 / sqrt(2 * PI * sigma * sigma) * exp(-(x * x) / (2 * sigma * sigma));
 }
 
-PPM_image::PPM_image(const char* filename)
+PPM_image::PPM_image(std::string filename)
 {
 	std::ifstream file(filename);
 	
@@ -18,7 +18,7 @@ PPM_image::PPM_image(const char* filename)
 		// P3 = ASCII
 		if(line != "P6")
 		{
-			std::cout << "Pas une image en PPM\n";
+			std::cout << "Not a PPM image" << std::endl;
 			exit(1);
 		}
 		
@@ -29,7 +29,7 @@ PPM_image::PPM_image(const char* filename)
 		
 		if(max_value != 255)
 		{
-			std::cout << "max_value != 255\n";
+			std::cout << "max_value != 255" << std::endl;
 			exit(1);
 		}
 		
@@ -43,7 +43,7 @@ PPM_image::PPM_image(const char* filename)
 }
 
 
-PPM_image::PPM_image(const int width, const int height)
+PPM_image::PPM_image(const decltype(w) width, const decltype(h) height)
 {
 	w = width;
 	h = height;
@@ -58,7 +58,7 @@ PPM_image::PPM_image(const PPM_image &image)
 	
 	pixels = new unsigned char[w * h * 3];
 	
-	for(int i = 0; i < w * h * 3; i++)
+	for (auto i = 0; i < w * h * 3; i++)
 	{
 		pixels[i] = image.pixels[i];
 	}
@@ -78,9 +78,9 @@ unsigned char* PPM_image::get_pixel(const int x, const int y) const throw (int)
 	return &pixels[3 * (y * w + x)];
 }
 
-void PPM_image::save(const char* filename) const
+void PPM_image::save(std::string filename) const
 {
-	std::cout << "Saving file " << filename << "...\n";
+	std::cout << "Saving file " << filename << "...";
 	std::ofstream file(filename);
 	
 	if(file.is_open())
@@ -91,44 +91,42 @@ void PPM_image::save(const char* filename) const
 	}
 	
 	file.close();
-	std::cout << "Ok\n";
+	std::cout << "Ok" << std::endl;
 }
 
 void PPM_image::gaussian_blur(const int str)
 {
-	std::cout << "Gaussian blur...\n";
+	std::cout << "Gaussian blur..." << std::endl;
 	
 	// Create kernel
-	double** mat = new double*[2 * str];
+	double mat[2 * str][2 * str];
 	
-	for(int i = 0; i < 2 * str; i++)
+	for (auto i = 0; i < 2 * str; i++)
 	{
-		mat[i] = new double[2 * str];
-		
-		for(int j = 0; j < 2 * str; j++)
+		for (auto j = 0; j < 2 * str; j++)
 		{
 			mat[i][j] = gauss(str, sqrt((i - str) * (i - str) + (j - str) * (j - str)));
 		}
 	}
-	
-	for (int i = 0; i < w; i++)
+
+	for (auto i = 0; i < w; i++)
 	{
 		std::cout << "\r" << (int)(100 * (float)(i + 1) / (float)w) << "%";
 		
-		for (int j = 0; j < h; j++)
+		for (auto j = 0; j < h; j++)
 		{
-			double r = 0, g = 0, b = 0;
-			double coeff = 0;
+			auto r = 0.0, g = 0.0, b = 0.0;
+			auto coeff = 0.0;
 			
-			for (int k = -str; k < str; k++)
+			for (auto k = -str; k < str; k++)
 			{
-				for (int l = -str; l < str; l++)
+				for (auto l = -str; l < str; l++)
 				{
 					try
 					{
-						unsigned char *p = get_pixel(i + k, j + l);
+						auto *p = get_pixel(i + k, j + l);
 						
-						double norm = mat[k + str][l + str];
+						auto norm = mat[k + str][l + str];
 						
 						r += *p * norm;
 						g += *(p + 1) * norm;
@@ -143,7 +141,7 @@ void PPM_image::gaussian_blur(const int str)
 				}
 			}
 			
-			unsigned char *p = get_pixel(i, j);
+			auto *p = get_pixel(i, j);
 			
 			if(coeff > 0)
 			{
@@ -154,69 +152,36 @@ void PPM_image::gaussian_blur(const int str)
 		}
 	}
 	
-	delete[] mat;
-	
-	std::cout << "\n";
+	std::cout << std::endl;
 }
-
-void PPM_image::test()
-{
-	std::cout << "Test...\n";
-	
-	unsigned char min = 255, max = 0;
-	
-	// Find max & min
-	for (int i = 0; i < w * h * 3; i++)
-	{	
-		if(pixels[i] > max)
-		{
-			max = pixels[i];
-		}
-		
-		if(pixels[i] < min)
-		{
-			min = pixels[i];
-		}
-	}
-	
-	// y = a.x + b
-	float a = ((float)255) / ((float)(max - min));
-	float b = (((float)-255) * (float)min) / ((float)(max - min));
-	
-	for (int i = 0; i < w * h * 3; i++)
-	{
-		pixels[i] = a * pixels[i] + b;
-	}
-}
-
 
 void PPM_image::edge()
 {
-	std::cout << "Edge detection...\n";
+	std::cout << "Edge detection..." << std::endl;
 	PPM_image img(*this);
 	
-	for (int i = 1; i < w - 1; i++)
+	for (auto i = 1; i < w - 1; i++)
 	{
 		std::cout << "\r" << (int)(100 * (float)(i + 2) / (float)w) << "%";
 		std::cout.flush();
-		for (int j = 1; j < h - 1; j++)
+		for (auto j = 1; j < h - 1; j++)
 		{
-			int val = 0;
+			auto val = 0;
 			
-			for(int k = 0; k < 3; k++)
+			for (auto k = 0; k < 3; k++)
 			{
-				int Gx = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i, j - 1) + k)) + *(img.get_pixel(i + 1, j - 1) + k)
+				auto Gx = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i, j - 1) + k)) + *(img.get_pixel(i + 1, j - 1) + k)
 					- *(img.get_pixel(i - 1, j + 1) + k) - 2 * (*(img.get_pixel(i, j + 1) + k)) - *(img.get_pixel(i + 1, j + 1) + k);
-				int Gy = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i - 1, j) + k)) + *(img.get_pixel(i - 1, j + 1) + k)
+				auto Gy = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i - 1, j) + k)) + *(img.get_pixel(i - 1, j + 1) + k)
 					- *(img.get_pixel(i + 1, j - 1) + k) - 2 * (*(img.get_pixel(i + 1, j) + k)) - *(img.get_pixel(i + 1, j + 1) + k);
-				int G = sqrt(Gx * Gx + Gy * Gy);
+				auto G = sqrt(Gx * Gx + Gy * Gy);
 				
 				val += G;
 			}
 			
 			val /= 3;
 			
-			for(int k = 0; k < 3; k++)
+			for (auto k = 0; k < 3; k++)
 			{
 				if(val > 255)
 				{
@@ -230,24 +195,40 @@ void PPM_image::edge()
 		}
 	}
 	
-	std::cout << "\n";
+	std::cout << std::endl;
+}
+
+void thread_revert(PPM_image* img, int start_range, int end_range)
+{
+	for (auto i = start_range; i < end_range; i++)
+	{
+		img->pixels[i] = 255 - img->pixels[i];
+	}
 }
 
 void PPM_image::revert()
 {
-	std::cout << "Reverting...\n";
-	
-	for(int i = 0; i < w * h * 3; i++)
+	std::cout << "Reverting..." << std::endl;
+
+	auto n_threads = 4;
+	std::vector<std::thread> threads;
+	std::cout << "Launching " << n_threads << " threads" << std::endl;
+	for (auto i = 0l; i < n_threads; i++)
 	{
-		pixels[i] = 255 - pixels[i];
+		threads.push_back(std::thread(thread_revert, this, i * w * h * 3 / n_threads, (i + 1) * w * h * 3 / n_threads));
+	}
+
+	for (auto &t : threads)
+	{
+		t.join();
 	}
 	
-	std::cout << "Ok\n";
+	std::cout << "Ok" << std::endl;
 }
 
 void PPM_image::add(PPM_image &image)
 {
-	for(int i = 0; i < w * h * 3; i++)
+	for (auto i = 0; i < w * h * 3; i++)
 	{
 		pixels[i] = (pixels[i] + image.pixels[i]) / 2;
 	}

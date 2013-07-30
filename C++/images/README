@@ -1,2 +1,11 @@
 Manipulate images
-Use raw PPM format option in gimp !
+Use raw PPM format option in gimp!
+
+Example:
+$ ./image lena.ppm edge output.ppm 
+INFO: planned 1 operations
+#0: edge
+Edge detection...
+100%
+Saving file output.ppm...Ok
+

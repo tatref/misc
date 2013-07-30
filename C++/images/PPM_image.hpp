@@ -4,9 +4,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstdlib>
 #include <cmath>
 #include <sstream>
+#include <vector>
+#include <thread>
 
 #define PI 3.141592653589
 
@@ -19,16 +20,19 @@ public:
 	// Attributes
 	int w, h;
 	unsigned char* pixels;
+	//std::vector<unsigned char> pixels;
+	
 	
 	// Constructors
-	PPM_image(const char* filename);
+	PPM_image(std::string filename);
 	PPM_image(const int width, const int height);
 	PPM_image(const PPM_image &image);
 	~PPM_image();
 	
 	// Utilities
-	unsigned char* get_pixel(const int x, const int y) const throw (int);
-	void save(const char* name) const;
+	//unsigned char* get_pixel(const int x, const int y) const throw (int);
+	decltype(pixels) get_pixel(const decltype(w) x, const decltype(h) y) const throw (int);
+	void save(std::string name) const;
 	
 	// Manipulation
 	void gaussian_blur(const int str);

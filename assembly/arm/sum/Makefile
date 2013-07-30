@@ -14,16 +14,25 @@ target = main
 
 
 all:
+	# create flash disk image
 	dd if=/dev/zero of=flash.bin bs=4096 count=4096
-	
-	$(AS) $(target).s -o $(target).o
-	$(LD) $(LD_OPTIONS) $(target).o -o $(target).elf
-	$(OBJCOPY) $(OBJCOPY_OPTIONS) $(target).elf $(target).bin
-	
-	dd if=./$(target).bin of=flash.bin conv=notrunc
 
-run: 
-	qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null
+	# assemble
+	$(AS) $(target).s -o $(target).o
+
+	# link
+	$(LD) $(LD_OPTIONS) $(target).o -o $(target).elf
+
+	# convert elf to bin format
+	$(OBJCOPY) $(OBJCOPY_OPTIONS) $(target).elf $(target).bin
+
+	# add binary to disk
+	dd if=$(target).bin of=flash.bin conv=notrunc
+
+run:
+	# -S: pause CPU at startup (c to continue)
+	# -s: enable gdbserver on port 1234
+	qemu-system-arm -s -S -M connex -pflash flash.bin -nographic -serial /dev/null
 
 clean:
 	rm -f $(target).bin $(target).elf $(target).o flash.bin
