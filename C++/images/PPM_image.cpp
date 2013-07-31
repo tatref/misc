@@ -73,7 +73,9 @@ PPM_image::~PPM_image()
 unsigned char* PPM_image::get_pixel(const int x, const int y) const throw (int)
 {
 	if(x < 0 || x > w || y < 0 || y > h)
+	{
 		throw 1;
+	}
 		
 	return &pixels[3 * (y * w + x)];
 }
@@ -94,9 +96,8 @@ void PPM_image::save(std::string filename) const
 	std::cout << "Ok" << std::endl;
 }
 
-void PPM_image::gaussian_blur(const int str)
+void thread_blur(PPM_image* src, PPM_image* dst, int start_line, int end_line, int str)
 {
-	std::cout << "Gaussian blur..." << std::endl;
 	
 	// Create kernel
 	double mat[2 * str][2 * str];
@@ -109,11 +110,11 @@ void PPM_image::gaussian_blur(const int str)
 		}
 	}
 
-	for (auto i = 0; i < w; i++)
+	for (auto i = 0; i < src->w; i++)
 	{
-		std::cout << "\r" << (int)(100 * (float)(i + 1) / (float)w) << "%";
+		//std::cout << "\r" << (int)(100 * (float)(i + 1) / (float)w) << "%";
 		
-		for (auto j = 0; j < h; j++)
+		for (auto j = start_line; j < end_line; j++)
 		{
 			auto r = 0.0, g = 0.0, b = 0.0;
 			auto coeff = 0.0;
@@ -124,7 +125,7 @@ void PPM_image::gaussian_blur(const int str)
 				{
 					try
 					{
-						auto *p = get_pixel(i + k, j + l);
+						auto* p = src->get_pixel(i + k, j + l);
 						
 						auto norm = mat[k + str][l + str];
 						
@@ -134,14 +135,14 @@ void PPM_image::gaussian_blur(const int str)
 						
 						coeff += norm;
 					}
-					catch(int n)
+					catch(const int& n)
 					{
 					
 					}
 				}
 			}
 			
-			auto *p = get_pixel(i, j);
+			auto* p = dst->get_pixel(i, j);
 			
 			if(coeff > 0)
 			{
@@ -151,29 +152,44 @@ void PPM_image::gaussian_blur(const int str)
 			}
 		}
 	}
-	
-	std::cout << std::endl;
 }
 
-void PPM_image::edge()
+void PPM_image::gaussian_blur(const int str)
 {
-	std::cout << "Edge detection..." << std::endl;
+	std::cout << "Gaussian blur..." << std::endl;
 	PPM_image img(*this);
-	
-	for (auto i = 1; i < w - 1; i++)
+
+	auto n_threads = std::thread::hardware_concurrency();
+	std::vector<std::thread> threads;
+	std::cout << "Launching " << n_threads << " threads" << std::endl;
+	for (auto i = 0l; i < n_threads; i++)
 	{
-		std::cout << "\r" << (int)(100 * (float)(i + 2) / (float)w) << "%";
-		std::cout.flush();
-		for (auto j = 1; j < h - 1; j++)
+		std::cout << "Thread #" << i << " start=" << i * h / n_threads << ", end=" << (i + 1) * h / n_threads << std::endl;
+		threads.push_back(std::thread(thread_blur, this, &img, i * h / n_threads, (i + 1) * h / n_threads, str));
+	}
+
+	for (auto &t : threads)
+	{
+		t.join();
+	}
+
+	std::copy(img.pixels, img.pixels + img.w * img.h * 3, this->pixels);
+
+}
+
+void thread_edge(PPM_image* src, PPM_image* dst, int start_line, int end_line)
+{
+	for (auto i = 1; i < src->w - 1; i++)
+	{
+		for (auto j = start_line; j < end_line; j++)
 		{
 			auto val = 0;
-			
 			for (auto k = 0; k < 3; k++)
 			{
-				auto Gx = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i, j - 1) + k)) + *(img.get_pixel(i + 1, j - 1) + k)
-					- *(img.get_pixel(i - 1, j + 1) + k) - 2 * (*(img.get_pixel(i, j + 1) + k)) - *(img.get_pixel(i + 1, j + 1) + k);
-				auto Gy = *(img.get_pixel(i - 1, j - 1) + k) + 2 * (*(img.get_pixel(i - 1, j) + k)) + *(img.get_pixel(i - 1, j + 1) + k)
-					- *(img.get_pixel(i + 1, j - 1) + k) - 2 * (*(img.get_pixel(i + 1, j) + k)) - *(img.get_pixel(i + 1, j + 1) + k);
+				auto Gx = *(src->get_pixel(i - 1, j - 1) + k) + 2 * (*(src->get_pixel(i, j - 1) + k)) + *(src->get_pixel(i + 1, j - 1) + k)
+					- *(src->get_pixel(i - 1, j + 1) + k) - 2 * (*(src->get_pixel(i, j + 1) + k)) - *(src->get_pixel(i + 1, j + 1) + k);
+				auto Gy = *(src->get_pixel(i - 1, j - 1) + k) + 2 * (*(src->get_pixel(i - 1, j) + k)) + *(src->get_pixel(i - 1, j + 1) + k)
+					- *(src->get_pixel(i + 1, j - 1) + k) - 2 * (*(src->get_pixel(i + 1, j) + k)) - *(src->get_pixel(i + 1, j + 1) + k);
 				auto G = sqrt(Gx * Gx + Gy * Gy);
 				
 				val += G;
@@ -185,17 +201,37 @@ void PPM_image::edge()
 			{
 				if(val > 255)
 				{
-					*(get_pixel(i, j) + k) = 255;
+					*(dst->get_pixel(i, j) + k) = 255;
 				}
 				else
 				{
-					*(get_pixel(i, j) + k) = val;
+					*(dst->get_pixel(i, j) + k) = val;
 				}
 			}
 		}
 	}
+}
+
+void PPM_image::edge()
+{
+	std::cout << "Edge detection..." << std::endl;
+	PPM_image img(*this);
 	
-	std::cout << std::endl;
+	auto n_threads = std::thread::hardware_concurrency();
+	std::vector<std::thread> threads;
+	std::cout << "Launching " << n_threads << " threads" << std::endl;
+	for (auto i = 0l; i < n_threads; i++)
+	{
+		std::cout << "Thread #" << i << " start=" << i * (h - 2) / n_threads + 1 << ", end=" << (i + 1) * (h - 2) / n_threads + 1 << std::endl;
+		threads.push_back(std::thread(thread_edge, this, &img, i * (h - 2) / n_threads + 1, (i + 1) * (h - 2) / n_threads + 1));
+	}
+
+	for (auto &t : threads)
+	{
+		t.join();
+	}
+
+	std::copy(img.pixels, img.pixels + img.w * img.h * 3, this->pixels);
 }
 
 void thread_revert(PPM_image* img, int start_range, int end_range)
@@ -210,7 +246,7 @@ void PPM_image::revert()
 {
 	std::cout << "Reverting..." << std::endl;
 
-	auto n_threads = 4;
+	auto n_threads = std::thread::hardware_concurrency();
 	std::vector<std::thread> threads;
 	std::cout << "Launching " << n_threads << " threads" << std::endl;
 	for (auto i = 0l; i < n_threads; i++)

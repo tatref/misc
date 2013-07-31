@@ -7,7 +7,8 @@ int main(int argc, char *argv[])
 	if (arguments.size() < 2)
 	{
 		std::cout << "Usage : " << argv[0] << " <input.ppm> [operation1] [operation2] ... <output.ppm>" << std::endl;
-		std::cout << "\toperation# can be one of: 'edge' (sobel), 'blur' (gaussian blur), 'revert'" << std::endl;
+		std::cout << "\toperation# can be one of: 'edge', 'blur <strength>', 'revert'" << std::endl;
+		std::cout << arguments[0] << " lena.ppm blur 5 revert edge output.ppm" << std::endl;
 		return 1;
 	}
 
@@ -31,7 +32,17 @@ int main(int argc, char *argv[])
 
 		if (operations[i] == "blur")
 		{
-			input.gaussian_blur(1);
+			try
+			{
+				i++;
+				auto str = std::stoi(operations[i]);
+				input.gaussian_blur(str);
+			}
+			catch(const std::exception& e)
+			{
+				std::cout << "Error" << std::endl;
+				return 1;
+			}
 		}
 
 		if (operations[i] == "revert")
@@ -44,6 +55,6 @@ int main(int argc, char *argv[])
 
 	auto output_filename = arguments[arguments.size() - 1];
 	input.save(output_filename);
-	
+
 	return 0;
 }

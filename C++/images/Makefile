@@ -2,7 +2,7 @@
 
 CC=clang++
 
-CFLAGS=-Wall -O0 -march=native -g -std=c++11
+CFLAGS=-Wall -O3 -march=native -g -std=c++11
 LDFLAGS=-lm -lpthread
 
 OBJS=main.o PPM_image.o
