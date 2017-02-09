@@ -29,7 +29,7 @@ def clean_code(dis_dump):
 
 
 def assemble(assembly):
-    """ assemble clean asembly code
+    """ assemble clean assembly code
     """
 
     bytecode = ''
@@ -105,17 +105,19 @@ def assemble_example():
 
     # JUMP into middle of opcode (0x09 = NOP)
     dis_dump = """
-
 0  JUMP_ABSOLUTE 5
 
 3  JUMP_ABSOLUTE 2313 # 0x0909
 
 6 LOAD_CONST 0
 9 RETURN_VALUE
-
 """
 
+    print 'Assembly input:\n' + dis_dump
+
     cleaned_assembly = clean_code(dis_dump)
+
+    print 'Cleaned input:\n' + dis_dump
 
     # generate bytecode
     my_bytecode = assemble(cleaned_assembly)
@@ -143,6 +145,4 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.DEBUG)
 
-    bytecode = '|\x00\x00|\x01\x00k\x04\x00r\x14\x00d\x01\x00GHn\x04\x00t\x00\x00Sd\x00\x00S'
-
-    print disassemble(bytecode)
+    assemble_example()
